@@ -97,6 +97,15 @@ python main.py -output_file full_comparison.xlsx
 
 ---
 
+## Useful links
+View All Zacks #1 Rank VGM Stocks
+
+https://www.zacks.com/stocks/buy-list/VGM?mode=zacks_rank_1&adid=zp_topmovers_1vgm&icid=home-home-zp_internal-zacks_premium-zacks_1_rank_top_movers-1_vgm_stocks
+
+View All Zacks Rank #1 Strong Buys
+
+https://www.zacks.com/stocks/buy-list/?adid=ZP_home_featzr_1list&icid=home-home-zp_internal-zacks_premium-featured_zacks_rank_stocks-1_Strong_buys
+
 ## 🧠 Author
 
 Built by a data-driven DevOps engineer with a passion for finance and automation.  
