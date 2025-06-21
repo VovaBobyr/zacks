@@ -117,6 +117,8 @@ def create_app():
                 df.columns = headers
                 data_df = df.iloc[1:]
 
+            # Sanitize the data: replace NaN with empty strings for JSON compatibility
+            data_df = data_df.fillna('')
             data = data_df.to_dict(orient='records')
             return jsonify({"filename": filename, "headers": list(df.columns), "data": data})
 
