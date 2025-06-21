@@ -22,4 +22,4 @@ EXPOSE 5001
 
 # Run the web server using Gunicorn
 # Use sh -c to allow environment variable expansion for $PORT
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5001} 'main:create_app()'"] 
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5001} --timeout 300 'main:create_app()'"] 
