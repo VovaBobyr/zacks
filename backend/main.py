@@ -41,6 +41,14 @@ def make_unique_headers(headers):
         unique_headers.append(header)
     return unique_headers
 
+def sort_key_by_date(filepath):
+    """Extracts date part from filename for sorting."""
+    basename = os.path.basename(filepath)
+    # e.g., rank_1_2024_01_15.xlsx -> 2024_01_15
+    # This key ensures chronological sorting.
+    date_part = basename.replace('rank_1_', '').rsplit('.', 1)[0]
+    return date_part
+
 def run_daily_tasks():
     """Wrapper function to run all daily file generation tasks."""
     print("--- Running daily tasks ---")
@@ -176,7 +184,7 @@ def collect_symbol_data(file_list):
     return symbol_data, symbol_metadata
 
 def compare_excel_files(vgmscore_filter=None, output_file='vgm_score_comparison.xlsx'):
-    file_list = sorted(glob.glob(os.path.join(EXCELS_DIR, "rank_1_*.xls*")))
+    file_list = sorted(glob.glob(os.path.join(EXCELS_DIR, "rank_1_*.xls*")), key=sort_key_by_date)
     if not file_list:
         print("❌ No files matching pattern 'rank_1_*.xls*' found in excels directory.")
         return
@@ -261,7 +269,7 @@ def get_yahoo_rank(symbol):
 
 def accumulate_scores_across_files(output_file='accumulated_scores.xlsx'):
     API_KEY = 'd1apbjhr01qjhvtqhljgd1apbjhr01qjhvtqhlk0'
-    file_list = sorted(glob.glob(os.path.join(EXCELS_DIR, "rank_1_*.xls*")))
+    file_list = sorted(glob.glob(os.path.join(EXCELS_DIR, "rank_1_*.xls*")), key=sort_key_by_date)
     if not file_list:
         print("❌ No files matching pattern 'rank_1_*.xls*' found in excels directory.")
         return
