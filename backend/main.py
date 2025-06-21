@@ -18,6 +18,28 @@ import time
 import yfinance as yf
 from flask import Flask, jsonify
 from flask_cors import CORS
+from apscheduler.schedulers.background import BackgroundScheduler
+
+def run_daily_tasks():
+    """Wrapper function to run all daily file generation tasks."""
+    print("--- Running daily tasks ---")
+    
+    # Ensure output directory exists
+    output_dir = "backend/output"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        
+    print("--- Generating accumulated.xlsx ---")
+    accumulate_scores_across_files("accumulated.xlsx")
+    
+    print("--- Generating vgm_filtered_A.xlsx ---")
+    compare_excel_files("A", "vgm_filtered_A.xlsx")
+
+    print("--- Generating vgm_filtered_AB.xlsx ---")
+    compare_excel_files("A,B", "vgm_filtered_AB.xlsx")
+    
+    print("--- Daily tasks finished ---")
+
 
 def create_app():
     app = Flask(__name__)
@@ -28,8 +50,10 @@ def create_app():
         try:
             output_dir = "backend/output"
             if not os.path.exists(output_dir):
-                return jsonify({"error": "Output directory not found"}), 404
-            
+                # If the dir doesn't exist, it means the scheduled job hasn't run yet.
+                # It's better to run it on-demand the first time.
+                run_daily_tasks()
+
             files = [f for f in os.listdir(output_dir) if f.endswith('.xlsx')]
             return jsonify(files)
         except Exception as e:
@@ -63,6 +87,11 @@ def create_app():
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+    
+    # Schedule the daily tasks
+    scheduler = BackgroundScheduler(daemon=True)
+    scheduler.add_job(run_daily_tasks, 'cron', hour=11, minute=0)
+    scheduler.start()
     
     return app
 
@@ -267,23 +296,11 @@ def accumulate_scores_across_files(output_file='accumulated_scores.xlsx'):
     print(f"✅ Accumulated output written to: {output_file}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Compare or accumulate VGM Scores across Excel files.")
-    parser.add_argument('-vgmscore_filter', type=str, help='Optional filter: e.g. A,B,C')
-    parser.add_argument('-output_file', type=str, default='vgm_score_comparison.xlsx', help='Output Excel file name')
-    parser.add_argument('-accumulate_scores', action='store_true', help='Accumulate all scores for all symbols across files')
-    parser.add_argument('-serve', action='store_true', help='Run the web server to expose excel data.')
-
-    args = parser.parse_args()
-    if args.serve:
-        # Before running the server, let's ensure the output directory exists
-        if not os.path.exists("backend/output"):
-            os.makedirs("backend/output")
-        app = create_app()
-        app.run(debug=True, port=5001)
-    elif args.accumulate_scores:
-        accumulate_scores_across_files(args.output_file)
-    else:
-        compare_excel_files(args.vgmscore_filter, args.output_file)
+    # The script is now primarily a web server, so we can simplify the main function.
+    # Gunicorn will be used in production to call create_app()
+    print("Starting Flask app...")
+    app = create_app()
+    app.run(debug=True, port=5001, use_reloader=False) # use_reloader=False is important for scheduler
 
 if __name__ == "__main__":
     main()

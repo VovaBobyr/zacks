@@ -1,6 +1,0 @@
-# Run the processing script every day at 11:00 AM
-0 11 * * * /opt/venv/bin/python /app/main.py -accumulate_scores -output_file output/accumulated.xlsx >> /var/log/cron.log 2>&1
-0 11 * * * /opt/venv/bin/python /app/main.py -vgmscore_filter A -output_file output/vgm_filtered_A.xlsx >> /var/log/cron.log 2>&1
-0 11 * * * /opt/venv/bin/python /app/main.py -vgmscore_filter A,B -output_file output/vgm_filtered_AB.xlsx >> /var/log/cron.log 2>&1
-
-# An empty line is required at the end of this file for a valid cron file. 
