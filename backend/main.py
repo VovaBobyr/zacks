@@ -20,6 +20,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.utils import secure_filename
+import threading
 
 # Define a consistent data directory. This will be the mount point for our persistent disk.
 DATA_DIR = os.environ.get('ZACKS_DATA_DIR', 'backend/data')
@@ -79,7 +80,13 @@ def create_app():
             if "rank_1_" in filename and filename.endswith('.xlsx'):
                 save_path = os.path.join(EXCELS_DIR, filename)
                 file.save(save_path)
-                return jsonify({"message": f"File {filename} uploaded successfully."}), 201
+                
+                # Run processing in a background thread to avoid blocking the request
+                thread = threading.Thread(target=run_daily_tasks)
+                thread.daemon = True
+                thread.start()
+
+                return jsonify({"message": f"File {filename} uploaded successfully. Reports are being regenerated in the background."}), 202
             else:
                 return jsonify({"error": "Invalid filename. Must start with 'rank_1_' and be an .xlsx file."}), 400
 
