@@ -1,0 +1,45 @@
+.app-footer {
+  grid-area: footer;
+  width: 100%;
+  padding: 20px 0;
+  border-top: 1px solid #ddd;
+  margin-top: 20px;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.copyright {
+  color: #555;
+  font-size: 14px;
+}
+
+.social-links {
+  display: flex;
+  align-items: center;
+}
+
+.social-links a {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  color: #555;
+  margin-left: 10px;
+  text-decoration: none;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.social-links a:hover {
+  background-color: #555;
+  color: #fff;
+} 

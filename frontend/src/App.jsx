@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
+import Footer from './Footer';
 
 const API_BASE_URL = '/api';
 
@@ -118,6 +119,7 @@ function App() {
           selectedFile && <p>Loading data...</p>
         )}
       </main>
+      <Footer />
     </div>
   );
 }
