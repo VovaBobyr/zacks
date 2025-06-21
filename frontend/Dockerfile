@@ -7,6 +7,10 @@ COPY package.json package-lock.json ./
 RUN npm install
 
 COPY . ./
+
+# Add execute permissions to fix build issues in some environments
+RUN chmod -R +x node_modules
+
 RUN npm run build
 
 # Stage 2: Serve the application from Nginx

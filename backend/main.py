@@ -26,6 +26,20 @@ DATA_DIR = os.environ.get('ZACKS_DATA_DIR', 'backend/data')
 EXCELS_DIR = os.path.join(DATA_DIR, 'excels')
 OUTPUT_DIR = os.path.join(DATA_DIR, 'output')
 
+def make_unique_headers(headers):
+    """Ensures all column headers are unique by appending a counter to duplicates."""
+    seen = {}
+    unique_headers = []
+    for header in headers:
+        original_header = header
+        if header in seen:
+            seen[header] += 1
+            header = f"{header}_{seen[original_header]}"
+        else:
+            seen[header] = 1
+        unique_headers.append(header)
+    return unique_headers
+
 def run_daily_tasks():
     """Wrapper function to run all daily file generation tasks."""
     print("--- Running daily tasks ---")
@@ -95,7 +109,7 @@ def create_app():
                 header1 = df.iloc[0].ffill()
                 header2 = df.iloc[1]
                 headers = [f"{h1}_{h2}" if pd.notna(h2) and str(h2).strip() else str(h1) for h1, h2 in zip(header1, header2)]
-                df.columns = headers
+                df.columns = make_unique_headers(headers)
                 data_df = df.iloc[2:]
             else:
                 # Single header
