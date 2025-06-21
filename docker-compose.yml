@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    volumes:
+      # This creates a persistent volume on the droplet for your data
+      - zacks_data:/app/data
+    environment:
+      - PORT=5001
+      - ZACKS_DATA_DIR=/app/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      # This exposes your web interface on port 80 of the droplet
+      - "80:80"
+    depends_on:
+      - backend
+
+# This defines the named volume for data persistence
+volumes:
+  zacks_data: 
