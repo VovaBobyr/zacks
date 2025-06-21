@@ -16,18 +16,22 @@ from collections import defaultdict
 import requests
 import time
 import yfinance as yf
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
+from werkzeug.utils import secure_filename
+
+# Define a consistent data directory. This will be the mount point for our persistent disk.
+DATA_DIR = os.environ.get('ZACKS_DATA_DIR', 'backend/data')
+EXCELS_DIR = os.path.join(DATA_DIR, 'excels')
+OUTPUT_DIR = os.path.join(DATA_DIR, 'output')
 
 def run_daily_tasks():
     """Wrapper function to run all daily file generation tasks."""
     print("--- Running daily tasks ---")
     
     # Ensure output directory exists
-    output_dir = "backend/output"
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
         
     print("--- Generating accumulated.xlsx ---")
     accumulate_scores_across_files("accumulated.xlsx")
@@ -42,19 +46,36 @@ def run_daily_tasks():
 
 
 def create_app():
+    # Ensure data directories exist on startup
+    os.makedirs(EXCELS_DIR, exist_ok=True)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
     app = Flask(__name__)
     CORS(app)
+
+    @app.route('/api/upload', methods=['POST'])
+    def upload_file():
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+        if file:
+            filename = secure_filename(file.filename)
+            if "rank_1_" in filename and filename.endswith('.xlsx'):
+                save_path = os.path.join(EXCELS_DIR, filename)
+                file.save(save_path)
+                return jsonify({"message": f"File {filename} uploaded successfully."}), 201
+            else:
+                return jsonify({"error": "Invalid filename. Must start with 'rank_1_' and be an .xlsx file."}), 400
 
     @app.route('/api/files', methods=['GET'])
     def list_files():
         try:
-            output_dir = "backend/output"
-            if not os.path.exists(output_dir):
-                # If the dir doesn't exist, it means the scheduled job hasn't run yet.
-                # It's better to run it on-demand the first time.
+            if not os.path.exists(OUTPUT_DIR) or not os.listdir(OUTPUT_DIR):
                 run_daily_tasks()
 
-            files = [f for f in os.listdir(output_dir) if f.endswith('.xlsx')]
+            files = [f for f in os.listdir(OUTPUT_DIR) if f.endswith('.xlsx')]
             return jsonify(files)
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -62,7 +83,7 @@ def create_app():
     @app.route('/api/file/<filename>', methods=['GET'])
     def get_file_data(filename):
         try:
-            file_path = os.path.join("backend/output", filename)
+            file_path = os.path.join(OUTPUT_DIR, filename)
             if not os.path.exists(file_path):
                 return jsonify({"error": "File not found"}), 404
 
@@ -132,9 +153,9 @@ def collect_symbol_data(file_list):
     return symbol_data, symbol_metadata
 
 def compare_excel_files(vgmscore_filter=None, output_file='vgm_score_comparison.xlsx'):
-    file_list = sorted(glob.glob("backend/excels/rank_1_*.xls*"))
+    file_list = sorted(glob.glob(os.path.join(EXCELS_DIR, "rank_1_*.xls*")))
     if not file_list:
-        print("❌ No files matching pattern 'rank_1_*.xls*' found in current directory.")
+        print("❌ No files matching pattern 'rank_1_*.xls*' found in excels directory.")
         return
 
     print(f"ℹ️ Found {len(file_list)} file(s):")
@@ -169,9 +190,9 @@ def compare_excel_files(vgmscore_filter=None, output_file='vgm_score_comparison.
             result_data[file_col].append(symbol_data[symbol].get(file_col, ''))
 
     df_result = pd.DataFrame(result_data)
-    output_file = os.path.join("backend/output", output_file)
-    df_result.to_excel(output_file, index=False)
-    print(f"✅ Output written to: {output_file}")
+    output_path = os.path.join(OUTPUT_DIR, output_file)
+    df_result.to_excel(output_path, index=False)
+    print(f"✅ Output written to: {output_path}")
 
 def get_finnhub_rank(symbol, api_key):
     """Fetch the most recent rating for a symbol from Finnhub.io."""
@@ -217,9 +238,9 @@ def get_yahoo_rank(symbol):
 
 def accumulate_scores_across_files(output_file='accumulated_scores.xlsx'):
     API_KEY = 'd1apbjhr01qjhvtqhljgd1apbjhr01qjhvtqhlk0'
-    file_list = sorted(glob.glob("backend/excels/rank_1_*.xls*"))
+    file_list = sorted(glob.glob(os.path.join(EXCELS_DIR, "rank_1_*.xls*")))
     if not file_list:
-        print("❌ No files matching pattern 'rank_1_*.xls*' found in current directory.")
+        print("❌ No files matching pattern 'rank_1_*.xls*' found in excels directory.")
         return
 
     print(f"ℹ️ Found {len(file_list)} file(s):")
@@ -284,8 +305,8 @@ def accumulate_scores_across_files(output_file='accumulated_scores.xlsx'):
         data_rows.append(row)
 
     df_result = pd.DataFrame(data_rows)
-    output_file = os.path.join("backend/output", output_file)
-    with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+    output_path = os.path.join(OUTPUT_DIR, output_file)
+    with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
         df_result.to_excel(writer, index=False, header=False, startrow=2)
         ws = writer.sheets['Sheet1']
         # Write header rows manually
@@ -293,7 +314,7 @@ def accumulate_scores_across_files(output_file='accumulated_scores.xlsx'):
             ws.cell(row=1, column=col_num, value=value)
         for col_num, value in enumerate(header_row_2, 1):
             ws.cell(row=2, column=col_num, value=value)
-    print(f"✅ Accumulated output written to: {output_file}")
+    print(f"✅ Accumulated output written to: {output_path}")
 
 def main():
     # The script is now primarily a web server, so we can simplify the main function.
