@@ -107,3 +107,21 @@ th:hover {
 tbody tr:nth-child(even) {
   background-color: #f9f9f9;
 }
+
+@media (max-width: 768px) {
+  .App {
+    grid-template-areas:
+      'header'
+      'nav'
+      'main'
+      'footer';
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr auto;
+    padding: 10px;
+    grid-gap: 10px;
+  }
+
+  main {
+    overflow-x: auto;
+  }
+}

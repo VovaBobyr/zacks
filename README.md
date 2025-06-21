@@ -1,112 +1,75 @@
-# 📊 VGM Score Comparison Tool
+# Zacks Excel Data Viewer
 
-This Python script compares **VGM Scores** across multiple Excel files following the naming pattern `rank_1_*.xls*`. It consolidates data into a single Excel output, showing which symbols appeared in which files along with their corresponding VGM Score.
+This project provides a web interface to view and analyze Zacks Excel data. It consists of a React frontend and a Python (Flask) backend.
 
----
+## 🚀 Getting Started
 
-## 🚀 Features
+The easiest way to run the application is by using Docker.
 
-- Automatically detects and processes all Excel files like `rank_1_2025_06_13.xlsx`, `rank_1_2025_06_14.xlsx`, etc.
-- Extracts and compares the **VGM Score** (`A`, `B`, `C`, `D`, `E`, `F`) for each symbol across files.
-- Adds `Company` and `Industry` columns per symbol — intelligently gathered from any available file.
-- Optional filtering to only include symbols with specific VGM Scores (`A`, `B`, etc.).
-- Outputs a clean Excel file with merged results.
+### Prerequisites
 
----
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
-## 📁 Input Format
+### Installation & Running
 
-Each Excel file should have the following columns:
+1.  **Clone the repository:**
+    ```sh
+    git clone <repository-url>
+    cd zacks
+    ```
 
-- `Symbol` *(required)*
-- `VGM Score` *(required)*
-- `Company` *(optional)*
-- `Industry` *(optional)*
+2.  **Run with Docker Compose:**
+    From the root directory of the project, run the following command:
+    ```sh
+    docker-compose up
+    ```
+    This command will build the Docker images for both the frontend and backend services and start them.
 
----
+3.  **Access the application:**
+    Once the containers are up and running, you can access the web interface in your browser at:
+    [http://localhost:8080](http://localhost:8080)
 
-## 📤 Output Format
+## Project Structure
 
-| Symbol | Company | Industry | rank_1_2025_06_13 | rank_1_2025_06_14 | rank_1_2025_06_15 |
-|--------|---------|----------|------------------|------------------|------------------|
-| AAPL   | Apple   | Tech     | A                | B                |                  |
-| TSLA   | Tesla   | Auto     |                  | A                | A                |
+-   `backend/`: Contains the Python Flask application that serves the Excel data via a REST API. It reads `.xlsx` files from the `backend/excels` directory.
+-   `frontend/`: A React application that provides the user interface for displaying the data.
+-   `docker-compose.yml`: Defines the services, networks, and volumes for the Docker application.
 
-If a symbol is missing in a given file, the corresponding cell is left empty.
+## Development
 
----
+If you want to run the services locally without Docker, you will need to set up each part of the stack separately.
 
-## ⚙️ Requirements
+### Backend (Python)
 
-Install required Python packages:
+1.  Navigate to the backend directory:
+    ```sh
+    cd backend
+    ```
+2.  Create a virtual environment and install dependencies:
+    ```sh
+    python -m venv venv
+    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+    pip install -r requirements.txt
+    ```
+3.  Run the Flask application:
+    ```sh
+    flask run
+    ```
+    The backend API will be available at `http://localhost:5000`.
 
-```bash
-pip install pandas openpyxl
-```
+### Frontend (React)
 
-## 🧪 Usage
-
-1. Place all your Excel files in the working directory and ensure they follow the naming pattern `rank_1_*.xls*`.
-
-2. Run the script:
-
-```bash
-python main.py
-```
-
-3. Optional: filter by VGM Score (e.g., only include symbols rated A or B in any file):
-
-```bash
-python main.py -vgmscore_filter A,B
-```
-
-4. Optional: specify custom output filename:
-```bash
-python main.py -vgmscore_filter A,B -output_file vgm_filtered_AB.xlsx
-```
-
-5. Optional: run without any filters and output to a custom file:
-
-```bash
-python main.py -output_file full_comparison.xlsx
-```
-
----
-
-## 📦 Example Directory
-\
-
-├── main.py
-
-├── rank_1_2025_06_13.xlsx
-
-├── rank_1_2025_06_14.xlsx
-
-├── rank_1_2025_06_15.xlsx
-
-└── vgm_score_comparison.xlsx
-
-
----
-
-## 🛠️ TODO / Improvements
-
-- [ ] Highlight highest VGM Score per row
-- [ ] Option to export to CSV
-- [ ] Add CLI flags for sorting or grouping
-
----
-
-## Useful links
-View All Zacks #1 Rank VGM Stocks
-
-https://www.zacks.com/stocks/buy-list/VGM?mode=zacks_rank_1&adid=zp_topmovers_1vgm&icid=home-home-zp_internal-zacks_premium-zacks_1_rank_top_movers-1_vgm_stocks
-
-View All Zacks Rank #1 Strong Buys
-
-https://www.zacks.com/stocks/buy-list/?adid=ZP_home_featzr_1list&icid=home-home-zp_internal-zacks_premium-featured_zacks_rank_stocks-1_Strong_buys
-
-## 🧠 Author
-
-Built by a data-driven DevOps engineer with a passion for finance and automation.  
-Feel free to contribute, fork, or provide suggestions.
+1.  Navigate to the frontend directory:
+    ```sh
+    cd frontend
+    ```
+2.  Install dependencies:
+    ```sh
+    npm install
+    ```
+3.  Start the development server:
+    ```sh
+    npm run dev
+    ```
+    The frontend will be available at `http://localhost:5173` and will proxy API requests to the backend.
