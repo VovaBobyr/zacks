@@ -1,0 +1,35 @@
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Install system dependencies, including cron
+RUN apt-get update && apt-get install -y cron
+
+# Copy the requirements file into the container at /app
+COPY backend/requirements.txt .
+
+# Create a virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the backend application code
+COPY backend/ .
+
+# Add crontab file and grant execution rights
+COPY backend/crontab.txt /etc/cron.d/zacks-cron
+RUN chmod 0644 /etc/cron.d/zacks-cron && crontab /etc/cron.d/zacks-cron
+
+# Create a startup script to run cron and the web server
+COPY backend/start.sh /start.sh
+RUN chmod +x /start.sh
+
+# The container will listen on this port
+EXPOSE 5001
+
+# Run the startup script
+CMD ["/start.sh"] 

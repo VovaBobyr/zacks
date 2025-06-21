@@ -2,3 +2,6 @@ pandas
 openpyxl
 yfinance
 requests
+Flask
+Flask-Cors
+gunicorn

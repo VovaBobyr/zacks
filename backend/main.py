@@ -16,6 +16,55 @@ from collections import defaultdict
 import requests
 import time
 import yfinance as yf
+from flask import Flask, jsonify
+from flask_cors import CORS
+
+def create_app():
+    app = Flask(__name__)
+    CORS(app)
+
+    @app.route('/api/files', methods=['GET'])
+    def list_files():
+        try:
+            output_dir = "backend/output"
+            if not os.path.exists(output_dir):
+                return jsonify({"error": "Output directory not found"}), 404
+            
+            files = [f for f in os.listdir(output_dir) if f.endswith('.xlsx')]
+            return jsonify(files)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route('/api/file/<filename>', methods=['GET'])
+    def get_file_data(filename):
+        try:
+            file_path = os.path.join("backend/output", filename)
+            if not os.path.exists(file_path):
+                return jsonify({"error": "File not found"}), 404
+
+            df = pd.read_excel(file_path, header=None)
+
+            # Check if there are merged header rows
+            if df.shape[0] > 1 and df.iloc[1].isnull().sum() > df.iloc[0].isnull().sum():
+                 # Multi-level header
+                header1 = df.iloc[0].ffill()
+                header2 = df.iloc[1]
+                headers = [f"{h1}_{h2}" if pd.notna(h2) and str(h2).strip() else str(h1) for h1, h2 in zip(header1, header2)]
+                df.columns = headers
+                data_df = df.iloc[2:]
+            else:
+                # Single header
+                headers = df.iloc[0]
+                df.columns = headers
+                data_df = df.iloc[1:]
+
+            data = data_df.to_dict(orient='records')
+            return jsonify({"filename": filename, "headers": list(df.columns), "data": data})
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    return app
 
 def collect_symbol_data(file_list):
     symbol_data = defaultdict(dict)
@@ -222,9 +271,16 @@ def main():
     parser.add_argument('-vgmscore_filter', type=str, help='Optional filter: e.g. A,B,C')
     parser.add_argument('-output_file', type=str, default='vgm_score_comparison.xlsx', help='Output Excel file name')
     parser.add_argument('-accumulate_scores', action='store_true', help='Accumulate all scores for all symbols across files')
+    parser.add_argument('-serve', action='store_true', help='Run the web server to expose excel data.')
 
     args = parser.parse_args()
-    if args.accumulate_scores:
+    if args.serve:
+        # Before running the server, let's ensure the output directory exists
+        if not os.path.exists("backend/output"):
+            os.makedirs("backend/output")
+        app = create_app()
+        app.run(debug=True, port=5001)
+    elif args.accumulate_scores:
         accumulate_scores_across_files(args.output_file)
     else:
         compare_excel_files(args.vgmscore_filter, args.output_file)
