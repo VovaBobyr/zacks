@@ -3,10 +3,10 @@ FROM node:18-alpine AS build
 
 WORKDIR /app
 
-COPY frontend/package.json frontend/package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm install
 
-COPY frontend/ ./
+COPY . ./
 RUN npm run build
 
 # Stage 2: Serve the application from Nginx
@@ -16,7 +16,7 @@ FROM nginx:1.21-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 
 # Copy our custom nginx config
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port 80
 EXPOSE 80

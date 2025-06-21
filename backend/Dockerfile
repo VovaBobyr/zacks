@@ -5,7 +5,7 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Copy the requirements file into the container at /app
-COPY backend/requirements.txt .
+COPY requirements.txt .
 
 # Create a virtual environment
 RUN python -m venv /opt/venv
@@ -15,7 +15,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the backend application code
-COPY backend/ .
+COPY . .
 
 # The container will listen on this port
 EXPOSE 5001
