@@ -21,6 +21,7 @@ from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.utils import secure_filename
 import threading
+from datetime import datetime
 
 # Define a consistent data directory. This will be the mount point for our persistent disk.
 DATA_DIR = os.environ.get('ZACKS_DATA_DIR', 'backend/data')
@@ -42,12 +43,16 @@ def make_unique_headers(headers):
     return unique_headers
 
 def sort_key_by_date(filepath):
-    """Extracts date part from filename for sorting."""
+    """Extracts date from filename and returns a datetime object for sorting."""
     basename = os.path.basename(filepath)
-    # e.g., rank_1_2024_01_15.xlsx -> 2024_01_15
-    # This key ensures chronological sorting.
-    date_part = basename.replace('rank_1_', '').rsplit('.', 1)[0]
-    return date_part
+    try:
+        # Expects filenames like: rank_1_YYYY_MM_DD.xlsx
+        date_part_str = basename.replace('rank_1_', '').rsplit('.', 1)[0]
+        # Handles formats like 2024_01_15
+        return datetime.strptime(date_part_str, '%Y_%m_%d')
+    except ValueError:
+        # Fallback for any file that doesn't match the date format
+        return datetime.min
 
 def run_daily_tasks():
     """Wrapper function to run all daily file generation tasks."""
@@ -205,20 +210,28 @@ def compare_excel_files(vgmscore_filter=None, output_file='vgm_score_comparison.
         all_symbols = filtered_symbols
 
     file_columns = [os.path.splitext(os.path.basename(f))[0] for f in file_list]
+    
+    # Shrink column names for vgm_* files
+    if 'vgm_' in output_file:
+        display_columns = [col.replace('rank_1_', '') for col in file_columns]
+    else:
+        display_columns = file_columns
+
     result_data = {
         'Symbol': [],
         'Company': [],
         'Industry': [],
     }
-    for col in file_columns:
+    for col in display_columns:
         result_data[col] = []
 
     for symbol in sorted(all_symbols):
         result_data['Symbol'].append(symbol)
         result_data['Company'].append(symbol_metadata.get(symbol, {}).get('Company', ''))
         result_data['Industry'].append(symbol_metadata.get(symbol, {}).get('Industry', ''))
-        for file_col in file_columns:
-            result_data[file_col].append(symbol_data[symbol].get(file_col, ''))
+        for i, file_col in enumerate(file_columns):
+            display_col = display_columns[i]
+            result_data[display_col].append(symbol_data[symbol].get(file_col, ''))
 
     df_result = pd.DataFrame(result_data)
     output_path = os.path.join(OUTPUT_DIR, output_file)
