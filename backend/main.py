@@ -22,6 +22,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.utils import secure_filename
 import threading
 from datetime import datetime
+import re
 
 # Define a consistent data directory. This will be the mount point for our persistent disk.
 DATA_DIR = os.environ.get('ZACKS_DATA_DIR', 'backend/data')
@@ -46,13 +47,15 @@ def sort_key_by_date(filepath):
     """Extracts date from filename and returns a datetime object for sorting."""
     basename = os.path.basename(filepath)
     try:
-        # Expects filenames like: rank_1_YYYY_MM_DD.xlsx
-        date_part_str = basename.replace('rank_1_', '').rsplit('.', 1)[0]
-        # Handles formats like 2024_01_15
-        return datetime.strptime(date_part_str, '%Y_%m_%d')
+        # Expects filenames containing formats like: YYYY_MM_DD or YYYY-MM-DD
+        match = re.search(r'(\d{4}[_-]\d{2}[_-]\d{2})', basename)
+        if match:
+            date_part_str = match.group(1).replace('-', '_')
+            return datetime.strptime(date_part_str, '%Y_%m_%d')
     except ValueError:
         # Fallback for any file that doesn't match the date format
         return datetime.min
+    return datetime.min
 
 def run_daily_tasks():
     """Wrapper function to run all daily file generation tasks."""
@@ -213,7 +216,14 @@ def compare_excel_files(vgmscore_filter=None, output_file='vgm_score_comparison.
     
     # Shrink column names for vgm_* files
     if 'vgm_' in output_file:
-        display_columns = [col.replace('rank_1_', '') for col in file_columns]
+        display_columns = []
+        for col in file_columns:
+            match = re.search(r'(\d{4}_\d{2}_\d{2})', col.replace('-', '_'))
+            if match:
+                display_columns.append(match.group(1).replace('_', ' '))
+            else:
+                # Fallback, remove rank_1_ prefix
+                display_columns.append(col.replace('rank_1_', '').replace('_', ' '))
     else:
         display_columns = file_columns
 
