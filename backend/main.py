@@ -1,11 +1,21 @@
 # -----------------------------------------------------------------------------
 # Example usage:
-#   python main.py
-#   python main.py -vgmscore_filter A,B,C
-#   python main.py -output_file my_output.xlsx
-#   python main.py -vgmscore_filter A,B -output_file filtered.xlsx
-#   python main.py -accumulate_scores -output_file accumulated.xlsx+
-#   python backend/main.py -accumulate_scores -output_file output/accumulated.xlsx
+#
+# To start the backend server:
+#   python backend/main.py
+#
+# For local runs (executing scripts directly):
+#   - First, set up your environment from the project root:
+#     python -m venv venv
+#     source venv/bin/activate  # or venv\Scripts\activate on Windows
+#     pip install -r backend/requirements.txt
+#
+#   - Place your input excel files (e.g., rank_1_2025_06_22.xlsx) in the
+#     `backend/localrun/excels` directory.
+#
+#   - Run commands from the project root directory (e.g., zacks/):
+#     python backend/main.py -vgmscore_filter A,B,C -output_file my_output.xlsx
+#     python backend/main.py -accumulate_scores -output_file accumulated.xlsx
 # -----------------------------------------------------------------------------
 
 import pandas as pd
@@ -24,8 +34,10 @@ import threading
 from datetime import datetime
 import re
 
-# Define a consistent data directory. This will be the mount point for our persistent disk.
-DATA_DIR = os.environ.get('ZACKS_DATA_DIR', 'backend/data')
+# Define a consistent data directory.
+# For Docker, this is set via ZACKS_DATA_DIR.
+# For local runs, it defaults to `backend/localrun`.
+DATA_DIR = os.environ.get('ZACKS_DATA_DIR', 'backend/localrun')
 EXCELS_DIR = os.path.join(DATA_DIR, 'excels')
 OUTPUT_DIR = os.path.join(DATA_DIR, 'output')
 
@@ -371,11 +383,56 @@ def accumulate_scores_across_files(output_file='accumulated_scores.xlsx'):
     print(f"✅ Accumulated output written to: {output_path}")
 
 def main():
-    # The script is now primarily a web server, so we can simplify the main function.
-    # Gunicorn will be used in production to call create_app()
-    print("Starting Flask app...")
-    app = create_app()
-    app.run(debug=True, port=5001, use_reloader=False) # use_reloader=False is important for scheduler
+    parser = argparse.ArgumentParser(
+        description="Zacks Excel Data Processor. Run without arguments to start the web server."
+    )
+    parser.add_argument(
+        '-vgmscore_filter',
+        type=str,
+        help="Comma-separated list of VGM scores to filter for (e.g., 'A,B')."
+    )
+    parser.add_argument(
+        '-output_file',
+        type=str,
+        help="Name of the output file. Will be placed in the standard output directory."
+    )
+    parser.add_argument(
+        '-accumulate_scores',
+        action='store_true',
+        help="Flag to accumulate scores across all files."
+    )
+
+    import sys
+    # If any CLI arguments are provided, run in script mode.
+    if len(sys.argv) > 1:
+        args = parser.parse_args()
+        
+        # Ensure output directory exists for local runs
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        
+        if args.accumulate_scores:
+            # Use provided output file or a default
+            output = args.output_file or 'accumulated.xlsx'
+            print(f"--- Accumulating scores. Output will be in {os.path.join(OUTPUT_DIR, output)} ---")
+            accumulate_scores_across_files(output_file=output)
+        elif args.vgmscore_filter:
+            output = args.output_file
+            if not output:
+                # Generate a default filename based on the filter
+                filter_suffix = ''.join(sorted(args.vgmscore_filter.upper().split(',')))
+                output = f"vgm_filtered_{filter_suffix}.xlsx"
+            
+            print(f"--- Comparing files with VGM Score filter: {args.vgmscore_filter}. Output will be in {os.path.join(OUTPUT_DIR, output)} ---")
+            compare_excel_files(vgmscore_filter=args.vgmscore_filter, output_file=output)
+        else:
+             # This handles the case where only -output_file might be passed, or other invalid combos.
+             print("Invalid arguments. Please specify an action like -accumulate_scores or -vgmscore_filter.")
+             parser.print_help()
+    else:
+        # No CLI arguments, run as a server.
+        print("Starting Flask app...")
+        app = create_app()
+        app.run(debug=True, port=5001, use_reloader=False) # use_reloader=False is important for scheduler
 
 if __name__ == "__main__":
     main()
